@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRMNL Dashboard</title>
+    
+    <!-- Materialize CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body class="dark-theme">
+    <nav class="nav-wrapper">
+        <div class="container">
+            <a href="#" class="brand-logo">
+                <i class="material-icons">dashboard</i>
+                TRMNL Dashboard
+            </a>
+            <ul id="nav-mobile" class="right">
+                <li>
+                    <a href="#" onclick="toggleTheme()" class="theme-toggle">
+                        <i class="material-icons" id="theme-icon">light_mode</i>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="refreshData()" class="refresh-btn">
+                        <i class="material-icons">refresh</i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col s12">
+                <h4 class="center-align">
+                    <i class="material-icons medium">terminal</i>
+                    Terminal Status
+                </h4>
+            </div>
+        </div>
+
+        <!-- Content Display -->
+        <div class="row">
+            <div class="col s12">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">
+                            <i class="material-icons">image</i>
+                            Aktueller Inhalt
+                        </span>
+                        <div id="content-area">
+                            <div class="center-align">
+                                <div class="preloader-wrapper big active" id="loading-spinner">
+                                    <div class="spinner-layer spinner-blue-only">
+                                        <div class="circle-clipper left">
+                                            <div class="circle"></div>
+                                        </div>
+                                        <div class="gap-patch">
+                                            <div class="circle"></div>
+                                        </div>
+                                        <div class="circle-clipper right">
+                                            <div class="circle"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p id="status-message">Daten werden geladen...</p>
+                            </div>
+                        </div>
+
+                        <!-- Image Display Area -->
+                        <div id="image-display" style="display: none;">
+                            <div class="center-align">
+                                <img id="trmnl-image" src="" alt="TRMNL Display" class="responsive-img" style="max-width: 100%; border: 1px solid #ccc;">
+                            </div>
+                            <div class="content-info">
+                                <p><strong>Dateiname:</strong> <span id="filename">-</span></p>
+                                <p><strong>Firmware Update:</strong> <span id="firmware-update">-</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Error Display -->
+                        <div id="error-display" style="display: none;">
+                            <div class="card-panel red lighten-4">
+                                <span class="red-text">
+                                    <i class="material-icons left">error</i>
+                                    <span id="error-message">Ein Fehler ist aufgetreten</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Card -->
+        <div class="row">
+            <div class="col s12">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">
+                            <i class="material-icons">settings</i>
+                            Steuerung
+                        </span>
+                        <p><strong>API Status:</strong> 
+                            <span id="api-status" class="status-indicator">
+                                {% if api_configured %}
+                                <i class="material-icons green-text">check_circle</i> Konfiguriert
+                                {% else %}
+                                <i class="material-icons red-text">error</i> Nicht konfiguriert
+                                {% endif %}
+                            </span>
+                        </p>
+                        <p><strong>Letzte Aktualisierung:</strong> <span id="last-update">Wird geladen...</span></p>
+                        <div class="card-action">
+                            <button class="btn waves-effect waves-light" onclick="refreshData()">
+                                <i class="material-icons left">refresh</i>
+                                Daten aktualisieren
+                            </button>
+                            <a href="/image" class="btn waves-effect waves-light">
+                                <i class="material-icons left">fullscreen</i>
+                                Vollbild-Ansicht
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Materialize JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    
+    <script>
+        // Theme management
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            
+            if (body.classList.contains('dark-theme')) {
+                body.classList.remove('dark-theme');
+                body.classList.add('light-theme');
+                themeIcon.textContent = 'dark_mode';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.classList.remove('light-theme');
+                body.classList.add('dark-theme');
+                themeIcon.textContent = 'light_mode';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Load saved theme
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            
+            if (savedTheme === 'light') {
+                body.classList.remove('dark-theme');
+                body.classList.add('light-theme');
+                themeIcon.textContent = 'dark_mode';
+            } else {
+                body.classList.add('dark-theme');
+                themeIcon.textContent = 'light_mode';
+            }
+        });
+
+        // Data refresh functionality
+        async function refreshData() {
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const statusMessage = document.getElementById('status-message');
+            const imageDisplay = document.getElementById('image-display');
+            const errorDisplay = document.getElementById('error-display');
+            const lastUpdate = document.getElementById('last-update');
+            
+            // Show loading state
+            loadingSpinner.style.display = 'block';
+            statusMessage.textContent = 'Daten werden geladen...';
+            imageDisplay.style.display = 'none';
+            errorDisplay.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                
+                // Update last update time
+                lastUpdate.textContent = new Date().toLocaleString('de-DE');
+                
+                if (data.success && data.data) {
+                    // Success - show image
+                    const imageUrl = data.data.image_url;
+                    const filename = data.data.filename || 'Unbekannt';
+                    const firmwareUpdate = data.data.update_firmware ? 'Ja' : 'Nein';
+                    
+                    document.getElementById('trmnl-image').src = imageUrl;
+                    document.getElementById('filename').textContent = filename;
+                    document.getElementById('firmware-update').textContent = firmwareUpdate;
+                    
+                    imageDisplay.style.display = 'block';
+                    statusMessage.textContent = 'Daten erfolgreich geladen';
+                } else {
+                    // Error
+                    const errorMsg = data.message || data.error || 'Unbekannter Fehler';
+                    document.getElementById('error-message').textContent = errorMsg;
+                    errorDisplay.style.display = 'block';
+                    statusMessage.textContent = 'Fehler beim Laden der Daten';
+                }
+            } catch (error) {
+                // Network or parsing error
+                document.getElementById('error-message').textContent = 'Netzwerkfehler: ' + error.message;
+                errorDisplay.style.display = 'block';
+                statusMessage.textContent = 'Verbindungsfehler';
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+        
+        // Initialize Materialize components and load data automatically
+        document.addEventListener('DOMContentLoaded', function() {
+            M.AutoInit();
+            // Automatically load data when page loads
+            refreshData();
+        });
+    </script>
+</body>
+</html>

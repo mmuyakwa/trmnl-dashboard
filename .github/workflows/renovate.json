@@ -1,0 +1,76 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Renovate configuration for UV-based Python projects",
+  "extends": [
+    "config:recommended",
+    ":maintainLockFilesWeekly"
+  ],
+  "schedule": ["before 10am on monday"],
+  "timezone": "UTC",
+  "labels": ["dependencies", "renovate"],
+  "assignees": ["mmuyakwa"],
+  "reviewers": ["mmuyakwa"],
+  "commitMessagePrefix": "deps: ",
+  "commitMessageAction": "update",
+  "commitMessageTopic": "{{depName}}",
+  "commitMessageExtra": "to {{newVersion}}",
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 10,
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Python dependencies in pyproject.toml",
+      "matchFileNames": ["pyproject.toml"],
+      "matchPackagePatterns": ["*"],
+      "groupName": "Python dependencies",
+      "schedule": ["before 10am on monday"]
+    },
+    {
+      "description": "UV lock file updates",
+      "matchFileNames": ["uv.lock"],
+      "schedule": ["before 10am on monday"],
+      "automerge": false,
+      "labels": ["dependencies", "lock-file"]
+    },
+    {
+      "description": "Docker dependencies",
+      "matchFileNames": ["Dockerfile", "docker-compose.yml"],
+      "groupName": "Docker dependencies",
+      "schedule": ["before 10am on monday"]
+    },
+    {
+      "description": "GitHub Actions",
+      "matchFileNames": [".github/workflows/**"],
+      "groupName": "GitHub Actions",
+      "schedule": ["before 10am on monday"]
+    },
+    {
+      "description": "Major version updates require manual review",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "major-update"],
+      "reviewers": ["mmuyakwa"]
+    },
+    {
+      "description": "Auto-merge minor and patch updates for production dependencies",
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchDepTypes": ["dependencies"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "merge"
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 10am on monday"],
+    "commitMessageAction": "refresh",
+    "commitMessageTopic": "lock file",
+    "automerge": true,
+    "automergeType": "pr"
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"],
+    "labels": ["security", "vulnerability"]
+  }
+}

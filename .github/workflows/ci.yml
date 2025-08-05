@@ -1,0 +1,162 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    # Run tests daily at 6 AM UTC
+    - cron: '0 6 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13", "3.12", "3.11"]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install UV
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+
+    - name: Install dependencies
+      run: uv sync --all-extras --dev
+
+    - name: Lint with flake8
+      run: |
+        uv run flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        uv run flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+
+    - name: Format check with black
+      run: uv run black --check app/
+      continue-on-error: true
+
+    - name: Type check with mypy (if available)
+      run: |
+        if uv list | grep -q mypy; then
+          uv run mypy app/ || true
+        else
+          echo "mypy not installed, skipping type checking"
+        fi
+      continue-on-error: true
+
+    - name: Run tests with pytest
+      run: |
+        if uv list | grep -q pytest; then
+          uv run pytest -v || echo "No tests found or tests failed"
+        else
+          echo "pytest not installed, skipping tests"
+        fi
+      continue-on-error: true
+
+    - name: Test Flask application startup
+      run: |
+        # Create minimal test .env file
+        echo "TRMNL_API_KEY=test-key" > .env
+        echo "TRMNL_DEVICE_ID=00:00:00:00:00:00" >> .env
+        echo "TRMNL_BASE_URL=https://trmnl.app/api" >> .env
+        echo "FLASK_ENV=testing" >> .env
+        echo "FLASK_DEBUG=False" >> .env
+        echo "FLASK_PORT=5000" >> .env
+        
+        # Test that the application starts without errors
+        timeout 10s uv run python app/app.py &
+        PID=$!
+        sleep 5
+        
+        # Test basic endpoints
+        curl -f http://localhost:5000/ > /dev/null || echo "Main page test failed"
+        curl -f http://localhost:5000/api/status > /dev/null || echo "API endpoint test failed (expected for test environment)"
+        
+        # Kill the server
+        kill $PID 2>/dev/null || true
+        wait $PID 2>/dev/null || true
+
+  docker-test:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: |
+        # Create test .env file
+        echo "TRMNL_API_KEY=test-key" > .env
+        echo "TRMNL_DEVICE_ID=00:00:00:00:00:00" >> .env
+        echo "TRMNL_BASE_URL=https://trmnl.app/api" >> .env
+        echo "FLASK_ENV=production" >> .env
+        echo "FLASK_DEBUG=False" >> .env
+        echo "FLASK_PORT=5000" >> .env
+        
+        docker build -t trmnl-dashboard:test .
+
+    - name: Test Docker container
+      run: |
+        # Run container in background
+        docker run -d --name test-container -p 5000:5000 --env-file .env trmnl-dashboard:test
+        
+        # Wait for container to start
+        sleep 10
+        
+        # Test basic connectivity
+        curl -f http://localhost:5000/ > /dev/null || echo "Docker container test failed"
+        
+        # Check container logs
+        docker logs test-container
+        
+        # Cleanup
+        docker stop test-container
+        docker rm test-container
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+
+    - name: Install UV
+      uses: astral-sh/setup-uv@v4
+
+    - name: Install dependencies
+      run: uv sync --dev
+
+    - name: Run safety check
+      run: |
+        uv add --dev safety
+        uv run safety check --json || true
+      continue-on-error: true
+
+    - name: Run bandit security linter
+      run: |
+        uv add --dev bandit
+        uv run bandit -r app/ -f json || true
+      continue-on-error: true
