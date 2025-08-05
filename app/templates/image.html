@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ filename }} - TRMNL Display</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .header.visible {
+            opacity: 1;
+        }
+        
+        .header-info {
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 12px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+        
+        .trmnl-image {
+            max-width: 100vw;
+            max-height: 100vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .trmnl-image.zoomed {
+            transform: scale(1.5);
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ccc;
+            font-size: 18px;
+        }
+        
+        .error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff6b6b;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 255, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1001;
+        }
+        
+        .refresh-indicator.visible {
+            opacity: 1;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .header {
+                padding: 5px 10px;
+            }
+            
+            .header-info {
+                font-size: 12px;
+            }
+            
+            .btn {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+        }
+        
+        /* Hide cursor after inactivity */
+        body.hide-cursor {
+            cursor: none;
+        }
+        
+        body.hide-cursor * {
+            cursor: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header" id="header">
+        <div class="header-info">
+            <strong>{{ device_id }}</strong> • {{ filename }}
+        </div>
+        <div class="header-controls">
+            <button class="btn" onclick="refreshImage()">↻ Refresh</button>
+            <a href="/" class="btn">← Dashboard</a>
+        </div>
+    </div>
+    
+    <div class="refresh-indicator" id="refreshIndicator">
+        Refreshing...
+    </div>
+    
+    <div class="image-container">
+        <div class="loading" id="loading">Loading image...</div>
+        <div class="error" id="error" style="display: none;">
+            Failed to load image<br>
+            <button class="btn" onclick="refreshImage()" style="margin-top: 10px;">Try Again</button>
+        </div>
+        <img class="trmnl-image" id="trmnlImage" style="display: none;" 
+             src="{{ image_url }}" 
+             alt="{{ filename }}"
+             onclick="toggleZoom()"
+             onload="imageLoaded()"
+             onerror="imageError()">
+    </div>
+
+    <script>
+        let refreshInterval;
+        let cursorTimeout;
+        let isZoomed = false;
+        
+        // Image loading handlers
+        function imageLoaded() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('trmnlImage').style.display = 'block';
+        }
+        
+        function imageError() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('trmnlImage').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        }
+        
+        // Zoom functionality
+        function toggleZoom() {
+            const image = document.getElementById('trmnlImage');
+            isZoomed = !isZoomed;
+            image.classList.toggle('zoomed', isZoomed);
+        }
+        
+        // Refresh functionality
+        async function refreshImage() {
+            const indicator = document.getElementById('refreshIndicator');
+            const image = document.getElementById('trmnlImage');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            
+            // Show refresh indicator
+            indicator.classList.add('visible');
+            
+            // Hide current image and show loading
+            image.style.display = 'none';
+            error.style.display = 'none';
+            loading.style.display = 'block';
+            
+            try {
+                // Add timestamp to prevent caching
+                const timestamp = new Date().getTime();
+                const newSrc = `{{ image_url }}?t=${timestamp}`;
+                
+                // Create new image to preload
+                const newImage = new Image();
+                newImage.onload = function() {
+                    image.src = this.src;
+                    imageLoaded();
+                    indicator.classList.remove('visible');
+                };
+                newImage.onerror = function() {
+                    imageError();
+                    indicator.classList.remove('visible');
+                };
+                newImage.src = newSrc;
+                
+            } catch (e) {
+                imageError();
+                indicator.classList.remove('visible');
+            }
+        }
+        
+        // Header visibility on mouse movement
+        function showHeader() {
+            const header = document.getElementById('header');
+            header.classList.add('visible');
+            
+            // Clear existing timeout
+            clearTimeout(cursorTimeout);
+            
+            // Show cursor
+            document.body.classList.remove('hide-cursor');
+            
+            // Hide header and cursor after 3 seconds of inactivity
+            cursorTimeout = setTimeout(() => {
+                header.classList.remove('visible');
+                document.body.classList.add('hide-cursor');
+            }, 3000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show header initially
+            showHeader();
+            
+            // Auto-refresh every 30 seconds
+            refreshInterval = setInterval(refreshImage, 30000);
+            
+            // Show header on mouse movement
+            document.addEventListener('mousemove', showHeader);
+            document.addEventListener('mousedown', showHeader);
+            document.addEventListener('keydown', showHeader);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                switch(e.key) {
+                    case 'r':
+                    case 'R':
+                        refreshImage();
+                        break;
+                    case 'f':
+                    case 'F':
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        } else {
+                            document.documentElement.requestFullscreen();
+                        }
+                        break;
+                    case 'z':
+                    case 'Z':
+                        toggleZoom();
+                        break;
+                    case 'Escape':
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        } else {
+                            window.location.href = '/';
+                        }
+                        break;
+                }
+            });
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            if (cursorTimeout) {
+                clearTimeout(cursorTimeout);
+            }
+        });
+    </script>
+</body>
+</html>
