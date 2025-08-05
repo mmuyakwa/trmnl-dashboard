@@ -13,8 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv first for better caching
 RUN pip install --no-cache-dir uv
 
-# Copy requirements first for better caching
+# Copy project files needed for installation
 COPY pyproject.toml .
+COPY README.md .
 
 # Install Python dependencies using uv with caching
 RUN uv pip install --system --no-cache-dir -e .
