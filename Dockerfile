@@ -3,18 +3,21 @@ FROM python:3.13-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies in one layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install uv first for better caching
+RUN pip install --no-cache-dir uv
 
 # Copy requirements first for better caching
 COPY pyproject.toml .
 
-# Install Python dependencies using uv
-RUN pip install uv
-RUN uv pip install --system -e .
+# Install Python dependencies using uv with caching
+RUN uv pip install --system --no-cache-dir -e .
 
 # Copy application code
 COPY app/ .
