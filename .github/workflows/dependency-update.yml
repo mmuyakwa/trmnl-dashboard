@@ -9,6 +9,8 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
+  issues: write
 
 jobs:
   update-dependencies:
@@ -88,46 +90,59 @@ jobs:
 
       - name: Create Pull Request
         if: steps.update.outputs.changes == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: |
-            deps: update UV dependencies to latest versions
-            
-            Automated dependency update using UV package manager.
-            All dependencies updated to latest compatible versions.
-            
-            Author: Michael Muyakwa (mmuyakwa)
-          title: "⬆️ Update UV dependencies"
-          body: |
-            ## 📦 Dependency Updates
-            
-            This PR updates all Python dependencies to their latest compatible versions using UV.
-            
-            ### Changes
-            - Updated `uv.lock` with latest package versions
-            - All dependencies resolved for compatibility
-            - Basic tests passed after update
-            
-            ### What's Changed
-            $(cat changes.txt || echo "Lock file updated with latest versions")
-            
-            ### Testing
-            - ✅ Application imports successfully
-            - ✅ Basic Flask startup test passed
-            - ✅ pytest suite executed (if available)
-            
-            ---
-            This PR was created automatically by the UV Dependency Updates workflow.
-            Review the changes and merge if everything looks good!
-          branch: automated/uv-dependency-updates
-          delete-branch: true
-          labels: |
-            dependencies
-            automated
-            uv
-          reviewers: mmuyakwa
-          assignees: mmuyakwa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Configure git
+          git config user.name "Michael Muyakwa"
+          git config user.email "34812005+mmuyakwa@users.noreply.github.com"
+          
+          # Create and switch to new branch
+          BRANCH_NAME="automated/uv-dependency-updates-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH_NAME"
+          
+          # Add and commit changes
+          git add uv.lock changes.txt
+          git commit -m "deps: update UV dependencies to latest versions
+          
+          Automated dependency update using UV package manager.
+          All dependencies updated to latest compatible versions.
+          
+          Author: Michael Muyakwa (mmuyakwa)"
+          
+          # Push branch
+          git push origin "$BRANCH_NAME"
+          
+          # Create PR body
+          PR_BODY="## 📦 Dependency Updates
+          
+          This PR updates all Python dependencies to their latest compatible versions using UV.
+          
+          ### Changes
+          - Updated \`uv.lock\` with latest package versions
+          - All dependencies resolved for compatibility
+          - Basic tests passed after update
+          
+          ### What's Changed
+          $(cat changes.txt 2>/dev/null || echo 'Lock file updated with latest versions')
+          
+          ### Testing
+          - ✅ Application imports successfully
+          - ✅ Basic Flask startup test passed
+          - ✅ pytest suite executed (if available)
+          
+          ---
+          This PR was created automatically by the UV Dependency Updates workflow.
+          Review the changes and merge if everything looks good!"
+          
+          # Create PR using gh CLI
+          gh pr create \
+            --title "⬆️ Update UV dependencies" \
+            --body "$PR_BODY" \
+            --label "dependencies,automated,uv" \
+            --assignee "mmuyakwa" \
+            --head "$BRANCH_NAME" \
+            --base "master" || echo "PR creation failed, but branch was pushed successfully"
 
       - name: Cleanup
         if: always()
