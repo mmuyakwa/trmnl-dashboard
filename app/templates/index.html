@@ -44,48 +44,6 @@
             </div>
         </div>
 
-        <!-- Status Card -->
-        <div class="row">
-            <div class="col s12 m6">
-                <div class="card">
-                    <div class="card-content">
-                        <span class="card-title">
-                            <i class="material-icons">info</i>
-                            Geräteinformationen
-                        </span>
-                        <p><strong>Device ID:</strong> {{ device_id }}</p>
-                        <p><strong>API Status:</strong> 
-                            <span id="api-status" class="status-indicator">
-                                {% if api_configured %}
-                                <i class="material-icons green-text">check_circle</i> Konfiguriert
-                                {% else %}
-                                <i class="material-icons red-text">error</i> Nicht konfiguriert
-                                {% endif %}
-                            </span>
-                        </p>
-                        <p><strong>Letzte Aktualisierung:</strong> <span id="last-update">Noch nicht geladen</span></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col s12 m6">
-                <div class="card">
-                    <div class="card-content">
-                        <span class="card-title">
-                            <i class="material-icons">settings</i>
-                            Steuerung
-                        </span>
-                        <div class="card-action">
-                            <button class="btn waves-effect waves-light" onclick="refreshData()">
-                                <i class="material-icons left">refresh</i>
-                                Daten aktualisieren
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Content Display -->
         <div class="row">
             <div class="col s12">
@@ -97,7 +55,7 @@
                         </span>
                         <div id="content-area">
                             <div class="center-align">
-                                <div class="preloader-wrapper big active" id="loading-spinner" style="display: none;">
+                                <div class="preloader-wrapper big active" id="loading-spinner">
                                     <div class="spinner-layer spinner-blue-only">
                                         <div class="circle-clipper left">
                                             <div class="circle"></div>
@@ -110,7 +68,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <p id="status-message">Klicken Sie auf "Daten aktualisieren" um zu beginnen</p>
+                                <p id="status-message">Daten werden geladen...</p>
                             </div>
                         </div>
 
@@ -139,20 +97,40 @@
             </div>
         </div>
 
-        <!-- JSON Data Display (for debugging) -->
+        <!-- Status Card -->
         <div class="row">
             <div class="col s12">
                 <div class="card">
                     <div class="card-content">
                         <span class="card-title">
-                            <i class="material-icons">code</i>
-                            Raw API Response
+                            <i class="material-icons">settings</i>
+                            Steuerung
                         </span>
-                        <pre id="json-display" class="json-container">Noch keine Daten geladen</pre>
+                        <p><strong>API Status:</strong> 
+                            <span id="api-status" class="status-indicator">
+                                {% if api_configured %}
+                                <i class="material-icons green-text">check_circle</i> Konfiguriert
+                                {% else %}
+                                <i class="material-icons red-text">error</i> Nicht konfiguriert
+                                {% endif %}
+                            </span>
+                        </p>
+                        <p><strong>Letzte Aktualisierung:</strong> <span id="last-update">Wird geladen...</span></p>
+                        <div class="card-action">
+                            <button class="btn waves-effect waves-light" onclick="refreshData()">
+                                <i class="material-icons left">refresh</i>
+                                Daten aktualisieren
+                            </button>
+                            <a href="/image" class="btn waves-effect waves-light">
+                                <i class="material-icons left">fullscreen</i>
+                                Vollbild-Ansicht
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- Materialize JavaScript -->
@@ -199,7 +177,6 @@
             const statusMessage = document.getElementById('status-message');
             const imageDisplay = document.getElementById('image-display');
             const errorDisplay = document.getElementById('error-display');
-            const jsonDisplay = document.getElementById('json-display');
             const lastUpdate = document.getElementById('last-update');
             
             // Show loading state
@@ -212,8 +189,6 @@
                 const response = await fetch('/api/status');
                 const data = await response.json();
                 
-                // Update JSON display
-                jsonDisplay.textContent = JSON.stringify(data, null, 2);
                 
                 // Update last update time
                 lastUpdate.textContent = new Date().toLocaleString('de-DE');
@@ -242,7 +217,6 @@
                 document.getElementById('error-message').textContent = 'Netzwerkfehler: ' + error.message;
                 errorDisplay.style.display = 'block';
                 statusMessage.textContent = 'Verbindungsfehler';
-                jsonDisplay.textContent = 'Fehler beim Laden der Daten';
             } finally {
                 loadingSpinner.style.display = 'none';
             }
@@ -251,9 +225,11 @@
         // Auto-refresh every 30 seconds
         setInterval(refreshData, 30000);
         
-        // Initialize Materialize components
+        // Initialize Materialize components and load data automatically
         document.addEventListener('DOMContentLoaded', function() {
             M.AutoInit();
+            // Automatically load data when page loads
+            refreshData();
         });
     </script>
 </body>

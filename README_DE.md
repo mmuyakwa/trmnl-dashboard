@@ -4,15 +4,22 @@ Eine elegante Flask-Webanwendung zur Anzeige und Überwachung Ihres TRMNL-Termin
 
 ![Dashboard Vorschau](https://img.shields.io/badge/Status-Aktiv-brightgreen) ![Python](https://img.shields.io/badge/Python-3.13+-blue) ![Flask](https://img.shields.io/badge/Flask-3.0+-red) ![Docker](https://img.shields.io/badge/Docker-Bereit-blue)
 
+## 📸 Screenshot
+
+![TRMNL Dashboard Screenshot](screenshot.png)
+
+*Das Dashboard lädt automatisch Ihren TRMNL-Display-Inhalt und bietet sowohl kompakte als auch Vollbild-Ansichtsoptionen.*
+
 ## ✨ Funktionen
 
 - 🎨 **Moderne Benutzeroberfläche**: Sauberes, responsives Interface mit Dark/Light-Theme-Umschaltung
-- 🔄 **Echtzeit-Updates**: Automatische Aktualisierung alle 30 Sekunden
+- 🔄 **Auto-Load**: Lädt TRMNL-Inhalte automatisch beim Seitenaufruf
+- ⚡ **Echtzeit-Updates**: Automatische Aktualisierung alle 30 Sekunden
 - 📱 **Mobilfreundlich**: Responsive Design für alle Bildschirmgrößen
-- 🖼️ **Direkter Bildzugriff**: Dedizierter `/image`-Endpunkt für aktuellen Display-Inhalt
+- 🖼️ **Vollbild-Ansicht**: Dedizierter Vollbildmodus mit Zoom und Steuerung
+- 🎮 **Interaktive Steuerung**: Klick zum Zoomen, Tastaturkürzel, automatisches UI-Ausblenden
 - 🛠️ **Entwicklermodus**: Automatisches Neuladen bei Code-Änderungen während der Entwicklung
 - 🐳 **Docker-bereit**: Containerisierte Deployment-Unterstützung
-- 🔍 **Debug-Modus**: Raw API-Response-Viewer zur Fehlerbehebung
 - ⚡ **Schnelle Einrichtung**: Schnelle Installation mit UV Package Manager
 
 ## 🚀 Schnellstart
@@ -85,10 +92,11 @@ Format: `XX:XX:XX:XX:XX:XX` (z.B. `A1:B2:C3:D4:E5:F6`)
 
 | Endpunkt | Beschreibung | Antwort |
 |----------|--------------|---------|
-| `/` | Haupt-Dashboard-Interface | HTML-Seite |
+| `/` | Haupt-Dashboard-Interface | HTML-Seite mit automatisch geladenem Inhalt |
 | `/api/status` | Aktueller TRMNL-Status und -Inhalt | JSON-Daten |
 | `/api/refresh` | TRMNL-Inhalt neu laden erzwingen | JSON-Daten |
-| `/image` | Direkte Weiterleitung zum aktuellen Bild | Bild-Weiterleitung |
+| `/image` | Vollbild-Bildansicht mit Steuerung | Interaktive HTML-Seite |
+| `/image/proxy` | Proxied Bild zur Vermeidung von CORS-Problemen | Bilddaten |
 
 ### Beispiel API-Antwort
 
@@ -133,21 +141,30 @@ docker build -t trmnl-dashboard .
 docker run -d -p 5001:5000 --env-file .env trmnl-dashboard
 ```
 
-## 🎨 Benutzeroberflächen-Anleitung
+## 🎮 Benutzeroberfläche
 
 ### Dashboard-Funktionen
 
+- **Automatisches Laden**: Inhalt wird automatisch beim Seitenbesuch geladen
 - **Theme-Umschaltung**: Zwischen dunklem und hellem Modus wechseln (speichert Präferenz)
 - **Aktualisieren-Button**: TRMNL-Inhalt manuell aktualisieren
-- **Auto-Refresh**: Inhalt wird automatisch alle 30 Sekunden aktualisiert
+- **Vollbild-Ansicht**: Dedizierter Button für immersive Betrachtung
 - **Status-Indikatoren**: Visuelles Feedback für API-Konnektivität
-- **Bildanzeige**: Vollauflösung des aktuellen Terminal-Inhalts
-- **Debug-Panel**: Raw API-Antwort zur Fehlerbehebung
 
-### Tastaturkürzel
+### Vollbild-Modus (`/image`)
 
-- `Strg/Cmd + R`: Manuelle Aktualisierung
-- Theme-Präferenz wird automatisch im Browser-Speicher gespeichert
+- **Immersive Darstellung**: Bild füllt das gesamte Browser-Fenster
+- **Interaktive Steuerung**: 
+  - Klick auf Bild zum Ein-/Auszoomen
+  - Mausbewegung zeigt/versteckt Header
+  - Auto-Refresh alle 30 Sekunden
+- **Tastaturkürzel**:
+  - `R` - Bild aktualisieren
+  - `F` - Vollbildmodus umschalten
+  - `Z` - Zoom umschalten
+  - `ESC` - Zurück zum Dashboard
+- **Mobile-optimiert**: Touch-freundliche Steuerung
+
 
 ## 🔧 Entwicklung
 
@@ -158,10 +175,12 @@ trmnl-dashboard/
 ├── app/
 │   ├── app.py              # Haupt-Flask-Anwendung
 │   ├── templates/
-│   │   └── index.html      # Dashboard-Template
+│   │   ├── index.html      # Dashboard-Template
+│   │   └── image.html      # Vollbild-Ansicht-Template
 │   └── static/
 │       └── style.css       # Custom CSS mit Themes
 ├── .env                    # Umgebungskonfiguration
+├── .env.example           # Konfigurationsvorlage
 ├── pyproject.toml         # Python-Dependencies
 ├── Dockerfile             # Container-Definition
 ├── docker-compose.yml     # Container-Orchestrierung
@@ -201,6 +220,7 @@ uv run flake8 app/
 | API-Fehler 401 | `TRMNL_API_KEY` und `TRMNL_DEVICE_ID` überprüfen |
 | Gerät nicht konfiguriert | `TRMNL_DEVICE_ID` mit korrekter MAC-Adresse aktualisieren |
 | Bild lädt nicht | TRMNL-Gerätekonnektivität und API-Antwort prüfen |
+| Vollbild-Probleme | Tastaturkürzel versuchen oder Seite neu laden |
 
 ### Debug-Schritte
 

@@ -176,7 +176,7 @@
             <button class="btn" onclick="refreshImage()" style="margin-top: 10px;">Try Again</button>
         </div>
         <img class="trmnl-image" id="trmnlImage" style="display: none;" 
-             src="{{ image_url }}" 
+             src="/image/proxy" 
              alt="{{ filename }}"
              onclick="toggleZoom()"
              onload="imageLoaded()"
@@ -224,24 +224,34 @@
             loading.style.display = 'block';
             
             try {
-                // Add timestamp to prevent caching
-                const timestamp = new Date().getTime();
-                const newSrc = `{{ image_url }}?t=${timestamp}`;
+                // Fetch fresh API data
+                const response = await fetch('/api/status');
+                const data = await response.json();
                 
-                // Create new image to preload
-                const newImage = new Image();
-                newImage.onload = function() {
-                    image.src = this.src;
-                    imageLoaded();
-                    indicator.classList.remove('visible');
-                };
-                newImage.onerror = function() {
+                if (data.success && data.data && data.data.image_url) {
+                    // Use proxy endpoint with timestamp to prevent caching
+                    const timestamp = new Date().getTime();
+                    const newSrc = `/image/proxy?t=${timestamp}`;
+                    
+                    // Create new image to preload
+                    const newImage = new Image();
+                    newImage.onload = function() {
+                        image.src = this.src;
+                        imageLoaded();
+                        indicator.classList.remove('visible');
+                    };
+                    newImage.onerror = function() {
+                        imageError();
+                        indicator.classList.remove('visible');
+                    };
+                    newImage.src = newSrc;
+                } else {
                     imageError();
                     indicator.classList.remove('visible');
-                };
-                newImage.src = newSrc;
+                }
                 
             } catch (e) {
+                console.error('Refresh error:', e);
                 imageError();
                 indicator.classList.remove('visible');
             }
