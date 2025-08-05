@@ -34,7 +34,7 @@ A sleek Flask web application for displaying and monitoring your TRMNL terminal 
 
 1. **Clone and setup**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/mmuyakwa/trmnl-dashboard.git
    cd trmnl-dashboard
    uv sync
    ```

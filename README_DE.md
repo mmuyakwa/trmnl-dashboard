@@ -34,7 +34,7 @@ Eine elegante Flask-Webanwendung zur Anzeige und Überwachung Ihres TRMNL-Termin
 
 1. **Klonen und einrichten**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/mmuyakwa/trmnl-dashboard.git
    cd trmnl-dashboard
    uv sync
    ```
