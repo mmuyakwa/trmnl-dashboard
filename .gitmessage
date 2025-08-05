@@ -1,0 +1,18 @@
+# Commit message template for TRMNL Dashboard
+# 
+# Format: <type>: <subject>
+#
+# Types:
+# feat: new feature
+# fix: bug fix
+# docs: documentation changes
+# style: formatting, missing semicolons, etc
+# refactor: code refactoring
+# test: adding/updating tests
+# chore: maintenance tasks
+# deps: dependency updates
+#
+# Example: feat: add fullscreen image viewer with zoom controls
+#
+# Author: Michael Muyakwa (mmuyakwa)
+# Project: TRMNL Dashboard
