@@ -1,6 +1,8 @@
 version: 2
 updates:
   # Python dependencies in pyproject.toml
+  # Note: Dependabot's "pip" ecosystem supports pyproject.toml
+  # but may not understand UV-specific features like dev-dependencies
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -22,6 +24,11 @@ updates:
     allow:
       - dependency-type: "direct"
       - dependency-type: "indirect"
+    # Only update main dependencies, not dev-dependencies
+    # (UV's dev-dependencies syntax may not be fully supported)
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
